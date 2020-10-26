@@ -23,16 +23,49 @@ class Name(Value):
         return self._name
 
 
-class Expression(Value):
+class ExpressionList(Value):
 
     def __init__(self, sub_expressions: List[Value]):
         self._sub_expr = sub_expressions
 
-    def eval(self):
+    def eval(self, scope):
         pass
 
     def literal(self):
         return "(" + " ".join(expr.literal for expr in self._sub_expr) + ")"
 
 
-class Integer()
+class Integer(Value):
+
+    def __init__(self, value: int):
+        self._value = value
+
+    def eval(self, scope):
+        return self._value
+
+    def literal(self):
+        return repr(self._value)
+
+
+class Float(Value):
+
+    def __init__(self, value: float):
+        self._value = value
+
+    def eval(self, scope):
+        return self._value
+
+    def literal(self):
+        return repr(self._value)
+
+
+class String(Value):
+
+    def __init__(self, value: str):
+        self._value = value
+
+    def eval(self, scope):
+        return self._value
+
+    def literal(self):
+        return repr(self._value)
