@@ -1,19 +1,34 @@
-from typing import Protocol, List
-from .scope import Scope
+from typing import List
+from abc import ABC, abstractmethod
 
 
-class Value(Protocol):
+class Value(ABC):
 
-    def eval(self, scope: 'Scope') -> 'Value':
+    def __init__(self, lineno: int, charno: int):
+        self._lineno = lineno
+        self._charno = charno
+
+    @property
+    def lineno(self) -> int:
+        return self._lineno
+
+    @property
+    def charno(self) -> int:
+        return self._charno
+
+    @abstractmethod
+    def eval(self, scope):
         pass
 
+    @abstractmethod
     def literal(self) -> str:
         pass
 
 
 class Name(Value):
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, lineno: int, charno: int):
+        super().__init__(lineno, charno)
         self._name = name
 
     def eval(self, scope):
@@ -25,11 +40,18 @@ class Name(Value):
 
 class ExpressionList(Value):
 
-    def __init__(self, sub_expressions: List[Value]):
+    def __init__(self, sub_expressions: List[Value], lineno: int, charno: int):
         self._sub_expr = sub_expressions
 
     def eval(self, scope):
-        pass
+        if not self._sub_expr:
+            return None
+        func = self._sub_expr[0]
+        args = self._sub_expr[1:]
+        scope = scope.enter()
+        func = func.eval(scope)
+        res = func(scope, *args)
+        return res
 
     def literal(self):
         return "(" + " ".join(expr.literal for expr in self._sub_expr) + ")"
@@ -37,7 +59,7 @@ class ExpressionList(Value):
 
 class Integer(Value):
 
-    def __init__(self, value: int):
+    def __init__(self, value: int, lineno: int, charno: int):
         self._value = value
 
     def eval(self, scope):
@@ -49,7 +71,7 @@ class Integer(Value):
 
 class Float(Value):
 
-    def __init__(self, value: float):
+    def __init__(self, value: float, lineno: int, charno: int):
         self._value = value
 
     def eval(self, scope):
@@ -61,7 +83,7 @@ class Float(Value):
 
 class String(Value):
 
-    def __init__(self, value: str):
+    def __init__(self, value: str, lineno: int, charno: int):
         self._value = value
 
     def eval(self, scope):
