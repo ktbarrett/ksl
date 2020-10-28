@@ -41,8 +41,8 @@ class Scope:
 
 class LazyValue:
 
-    def __init__(self, expression: 'Expression', scope: 'Scope'):
-        pass  # TODO
+    @classmethod
+    def from
 
     @cached_property
     def value(self) -> Any:
@@ -63,7 +63,10 @@ class ListExpression(Expression):
         return self._sub_expressions
 
     def eval(self, scope: Scope) -> LazyValue:
-        pass  # TODO
+        scope = Scope(parent=scope)
+        sub_expressions = [expr.eval(scope) for expr in self._sub_expressions]
+        func, *args = sub_expressions
+        return LazyValue.from_expression()
 
     def print(self) -> str:
         return '(' + ' '.join(e.print() for e in self._sub_expressions) + ')'
@@ -83,7 +86,7 @@ class Name(Expression):
         return self._name
 
     def eval(self, scope: Scope) -> LazyValue:
-        pass  # TODO
+        return scope[self._name]
 
     def print(self) -> str:
         return self._name
@@ -103,7 +106,7 @@ class Literal(Expression):
         return self._value
 
     def eval(self, scope: Scope) -> LazyValue:
-        return self._value
+        return LazyValue.from_value(self._value)
 
     def print(self) -> str:
         return repr(self._value)
