@@ -17,14 +17,20 @@ class Expression(Protocol):
         pass
 
 
+class LazyValue(Protocol):
+
+    def value(self) -> Any:
+        pass
+
+
 class Scope:
 
-    def __init__(self, parent: Union[None, 'Scope']):
+    def __init__(self, parent: Union[None, 'Scope'] = None):
         self._scope: Dict[str, 'LazyValue'] = {}
         self._parent = parent
 
     @property
-    def parent(self) -> 'Scope':
+    def parent(self) -> Union[None, 'Scope']:
         return self._parent
 
     def __getitem__(self, item: str) -> 'LazyValue':
@@ -39,63 +45,19 @@ class Scope:
         self._scope[item] = value
 
 
-class LazyValue:
+class LazyLiteral:
 
-    @classmethod
-    def from
+    def __init__(self, value: Any):
+        self._value = value
 
-    @cached_property
     def value(self) -> Any:
-        pass  # TODO
-
-
-class ListExpression(Expression):
-
-    def __init__(self, sub_expressions: List[Expression], **info: Any):
-        self._sub_expressions = sub_expressions
-        self._info = info
-
-    @property
-    def info(self) -> Dict[str, Any]:
-        return self._info
-
-    def inspect(self) -> List[Expression]:
-        return self._sub_expressions
-
-    def eval(self, scope: Scope) -> LazyValue:
-        scope = Scope(parent=scope)
-        sub_expressions = [expr.eval(scope) for expr in self._sub_expressions]
-        func, *args = sub_expressions
-        return LazyValue.from_expression()
-
-    def print(self) -> str:
-        return '(' + ' '.join(e.print() for e in self._sub_expressions) + ')'
-
-
-class Name(Expression):
-
-    def __init__(self, name: str, **info: Any):
-        super().__init__(**info)
-        self._name = name
-
-    @property
-    def info(self) -> Dict[str, Any]:
-        return self._info
-
-    def inspect(self) -> str:
-        return self._name
-
-    def eval(self, scope: Scope) -> LazyValue:
-        return scope[self._name]
-
-    def print(self) -> str:
-        return self._name
+        return self._value
 
 
 class Literal(Expression):
 
     def __init__(self, value: Any, **info: Any):
-        super().__init__(**info)
+        self._info = info
         self._value = value
 
     @property
@@ -106,14 +68,17 @@ class Literal(Expression):
         return self._value
 
     def eval(self, scope: Scope) -> LazyValue:
-        return LazyValue.from_value(self._value)
+        return LazyLiteral(self._value)
 
     def print(self) -> str:
         return repr(self._value)
 
 
-def Eval(expr: Expression, scope: Scope) -> Any:
-    return expr.eval(scope).value
+def Eval(expr: Expression, scope: Union[None, Scope] = None) -> Any:
+    if scope is None:
+        scope = Scope()
+    result = expr.eval(scope)
+    return result.value()
 
 
 def Print(expr: Expression) -> str:
