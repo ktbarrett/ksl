@@ -1,5 +1,5 @@
 from typing import Any, Union, Protocol, Dict, List
-from functools import cached_property
+from .utils import cached
 
 
 __version__ = '0.1.dev0'
@@ -45,13 +45,26 @@ class Scope:
         self._scope[item] = value
 
 
-class LazyLiteral:
+class LazyLiteral(LazyValue):
 
     def __init__(self, value: Any):
         self._value = value
 
+    @cached
     def value(self) -> Any:
         return self._value
+
+
+class LazyFunctionCall(LazyValue):
+
+    def __init__(self, func: LazyValue, args: List[LazyValue]):
+        self._func = func
+        self._args = args
+
+    @cached
+    def value(self) -> Any:
+        func = self._func.value()
+        return func(*self._args)
 
 
 class Literal(Expression):
@@ -64,7 +77,7 @@ class Literal(Expression):
     def info(self) -> Dict[str, Any]:
         return self._info
 
-    def inspect(self) -> str:
+    def inspect(self) -> Any:
         return self._value
 
     def eval(self, scope: Scope) -> LazyValue:
@@ -72,6 +85,52 @@ class Literal(Expression):
 
     def print(self) -> str:
         return repr(self._value)
+
+
+class Name(Expression):
+
+    def __init__(self, name: str, **info: Any):
+        self._name = name
+        self._info = info
+
+    @property
+    def info(self) -> Dict[str, Any]:
+        return self._info
+
+    def inspect(self) -> str:
+        return self._name
+
+    def eval(self, scope: Scope) -> LazyValue:
+        return scope[self._name]
+
+    def print(self) -> str:
+        return self._name
+
+
+class ListExpression(Expression):
+
+    def __init__(self, sub_expressions: List[Expression], **info: Any):
+        self._sub_expressions = sub_expressions
+        self._info = info
+
+    @property
+    def info(self) -> Dict[str, Any]:
+        return self._info
+
+    def inspect(self) -> List[Expression]:
+        return self._sub_expressions
+
+    def eval(self, scope: Scope) -> LazyValue:
+        # enter a new scope
+        scope = Scope(parent=scope)
+        # evaluate each element
+        sub_expressions = [e.eval(scope) for e in self._sub_expressions]
+        # call function lazily
+        func, *args = sub_expressions
+        return LazyFunctionCall(func, args)
+
+    def print(self) -> str:
+        return '(' + ' '.join(e.print() for e in self._sub_expressions) + ')'
 
 
 def Eval(expr: Expression, scope: Union[None, Scope] = None) -> Any:
