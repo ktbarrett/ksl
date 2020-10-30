@@ -1,8 +1,8 @@
 from typing import Any
-from ksl import Eval, Print
-from ksl import Scope
-from ksl import Expression, Literal, Name, ListExpression
-from ksl import LazyValue, LazyLiteral, LazyFunctionCall
+from ksl.engine import Eval, Print
+from ksl.engine import Scope
+from ksl.engine import Expression, Literal, Name, ListExpression
+from ksl.engine import LazyValue, LazyLiteral, LazyFunctionCall
 
 
 def test_literal():
@@ -54,3 +54,24 @@ def test_list_expression():
     scope["add"] = LazyLiteral(value=add)
 
     assert Eval(expr, scope) == 5
+
+
+def test_nested_expression():
+
+    def add(a: LazyValue, b: LazyValue) -> Any:
+        a = a.value()
+        b = b.value()
+        return a + b
+
+    scope = Scope()
+    scope['+'] = LazyLiteral(value=add)
+
+    expr = ListExpression([
+        Name('+'),
+        Literal(1),
+        ListExpression([
+            Name('+'),
+            Literal(2),
+            Literal(3)])])
+
+    assert Eval(expr, scope) == 6
