@@ -10,8 +10,6 @@ def parse(source: Optional[Iterable[str]] = None, filename: Optional[Union[str, 
     if source is not None:
         if filename is None:
             filename = "(anonymous)"
-        else:
-            filename = str(filename)
     elif filename is not None:
         source = (char for line in open(filename) for char in line)
     else:
@@ -31,24 +29,25 @@ class Parser:
         self._lineno = 1
         self._charno = 1
         self._iter = self._iterate(source)
+        self._finished = False
         next(self._iter)  # set first values for prev and curr
 
     def _iterate(self, source: Iterable[str]):
-        for self._prev, self._curr in window(chain((None,), source, (None,)), 2):
+        for self._prev, self._curr in window(chain((None,), source), 2):
             yield self._curr
             if self._curr == '\n':
                 self._lineno += 1
                 self._charno = 1
             else:
                 self._charno += 1
+        self._finished = True
 
-    def _step(self) -> str:
+    def _step(self) -> None:
         """ Step to the next character in the input """
-        return next(self._iter)
-
-    @property
-    def _finished(self):
-        return self._curr is None
+        try:
+            next(self._iter)
+        except StopIteration:
+            pass
 
     def _error(self, msg: str) -> None:
         """ Create and raise a ParseError """
