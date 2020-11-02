@@ -89,25 +89,30 @@ class Parser:
         """
         Parses the next list expression
 
-        LIST_EXPR := '(' WS* (EXPR WS+)* EXPR? WS* ')'
+        LIST_EXPR := '(' WS* (EXPR WS+)* EXPR WS* ')'
         """
         start_line = self._lineno
         start_char = self._charno
         # consume '('
         self._step()
         sub_expressions = []
+        # consume any empty space
+        self._parse_whitespace()
+        if self._curr == ')':
+            msg = f"List expression starting at {self._filename}:{start_line},{start_char} is empty"
+            self._error(msg)
         while True:
-            # consume any empty space
-            self._parse_whitespace()
+            expr = self._parse_expr()
+            sub_expressions.append(expr)
             if self._finished:
                 msg = f"List expression starting at {self._filename}:{start_line},{start_char} does not terminate"
                 self._error(msg)
-            # if ')' the list expression is done, otherwise parse the next thing as a sub expression
             if self._curr == ')':
                 break
-            else:
-                expr = self._parse_expr()
-                sub_expressions.append(expr)
+            if not self._curr.isspace():
+                self._error("Missing whitespace?")
+            # consume any empty space
+            self._parse_whitespace()
         # consume ')'
         self._step()
         # yield a list expression
@@ -144,10 +149,11 @@ class Parser:
             if self._finished:
                 self._error(f"Literal starting at {self._filename}:{start_line},{start_char} does not terminate")
             # strings end when matching an unescaped quote of the same type that started the literal
-            if self._curr == start_quote and self._prev != '\\':
-                # consume the ending quote and leave
-                self._step()
-                break
+            if self._curr == start_quote:
+                if self._prev != '\\':
+                    # consume the ending quote and leave
+                    self._step()
+                    break
             token.append(self._curr)
             self._step()
         # try to eval string
@@ -171,11 +177,12 @@ class Parser:
 
         NAME := \S+
         """
+        delimeters = (')', '(', '\'', '\"')
         start_line = self._lineno
         start_char = self._charno
         # consume name
         token = []
-        while not self._finished and not self._curr.isspace() and self._curr not in ('(', ')'):
+        while not self._finished and not self._curr.isspace() and self._curr not in delimeters:
             token.append(self._curr)
             self._step()
         # yield a name
