@@ -1,76 +1,69 @@
-from typing import Any, Union, Protocol, Dict, List, TypeVar, Generic
+from typing import Any, Union, Protocol, Dict, List, TypeVar, Callable
 from .utils import cached
-from .types import ValueType, MacroFunctionType
+
+
+MacroFunctionType = Callable[['ListExpression'], 'Expression']
+
+
+def eval(expr: 'Expression') -> Any:
+    from .builtins import builtin_variables, builtin_macros
+    return expr.bind(Scope(builtin_variables), Scope(builtin_macros)).eval()
 
 
 class Expression(Protocol):
 
-    def inspect(self) -> Any:
-        pass
-
     def bind(self, variable_scope: 'Scope[Expression]', macro_scope: 'Scope[MacroFunctionType]') -> 'Expression':
         pass
 
-    def eval(self) -> ValueType:
-        pass
-
-    def print(self) -> str:
+    def eval(self) -> Any:
         pass
 
 
 T = TypeVar('T')
 
 
-class Scope(Generic[T]):
+class Scope(Dict[str, T]):
 
-    def __init__(self, parent: Union[None, 'Scope[T]'] = None):
-        self._scope: Dict[str, T] = {}
+    def __init__(self, parent: Union[None, 'Dict[str, T]'] = None):
+        super().__init__()
         self._parent = parent
 
     @property
-    def parent(self) -> Union[None, 'Scope[T]']:
+    def parent(self) -> Union[None, 'Dict[str, T]']:
         return self._parent
 
     def __getitem__(self, item: str) -> T:
-        if item in self._scope:
-            return self._scope[item]
-        elif self._parent is None:
-            raise KeyError(item)
-        else:
+        if item in self:
+            return self[item]
+        elif self._parent is not None:
             return self._parent[item]
-
-    def __setitem__(self, item: str, value: T):
-        self._scope[item] = value
+        return super().__getitem__(item)
 
 
-class Literal(Expression):
+class Literal(str, Expression):
 
-    def __init__(self, value: ValueType, **info: Any):
-        self._info = info
-        self._value = value
+    def __new__(cls, value: str, **info: Any):
+        s = str.__new__(cls, value)
+        s._info = info
+        return s
 
     @property
     def info(self) -> Dict[str, Any]:
         return self._info
 
-    def inspect(self) -> Any:
-        return self._value
-
     def bind(self, variable_scope: Scope[Expression], macro_scope: Scope[MacroFunctionType]) -> Expression:
         return self
 
-    def eval(self) -> ValueType:
-        return self._value
-
-    def print(self) -> str:
-        return repr(self._value)
+    def eval(self) -> Any:
+        return self
 
 
-class Name(Expression):
+class Name(str, Expression):
 
-    def __init__(self, name: str, **info: Any):
-        self._name = name
-        self._info = info
+    def __new__(cls, name: str, **info: Any):
+        s = str.__new__(cls, name)
+        s._info = info
+        return s
 
     @property
     def info(self) -> Dict[str, Any]:
@@ -79,75 +72,46 @@ class Name(Expression):
     def bind(self, variable_scope: Scope[Expression], macro_scope: Scope[MacroFunctionType]) -> Expression:
         return variable_scope[self]
 
-    def eval(self) -> ValueType:
+    def eval(self) -> Any:
         raise RuntimeError("Attempted evaluating unbound name")
-
-    def inspect(self) -> str:
-        return self._name
-
-    def print(self) -> str:
-        return self._name
 
 
 class Parameter(Name):
 
-    UNBOUND = object()
-
-    def __init__(self, name: str, **info: Any):
-        super().__init__(name, **info)
-        self._value: Union[Literal['Name.UNBOUND'], ValueType] = type(self).UNBOUND
-
-    def set_value(self, value: ValueType) -> None:
-        if self._value is not type(self).UNBOUND:
-            raise RuntimeError("Attempt to bind a new value to a name")
+    def set_value(self, value: Any) -> None:
         self._value = value
 
-    def eval(self) -> ValueType:
-        if self._value is not type(self).UNBOUND:
-            return self._value
-        return super().eval()
+    def eval(self) -> Any:
+        return self._value
 
 
-class ListExpression(Expression):
+class ListExpression(tuple, Expression):
 
-    def __init__(self, sub_expressions: List[Expression], **info: Any):
-        self._sub_expressions = sub_expressions
-        self._info = info
+    def __new__(cls, sub_expressions: List[Expression], **info: Any):
+        s = tuple._new__(cls, sub_expressions)
+        s._info = info
+        return s
 
     @property
     def info(self) -> Dict[str, Any]:
         return self._info
 
-    def inspect(self) -> List[Expression]:
-        return self._sub_expressions
-
     def bind(self, variable_scope: Scope[Expression], macro_scope: Scope[MacroFunctionType]) -> Expression:
-        if len(self._sub_expressions) >= 1:
-            func = self._sub_expressions[0]
-            if isinstance(func, Name) and func.inspect() in macro_scope:
+        if len(self) >= 1:
+            func = self[0]
+            if isinstance(func, Name) and func in macro_scope:
                 macro = macro_scope[func]
                 changed = macro(self)
                 return changed.bind(variable_scope, macro_scope)
-        for expr in self._sub_expressions:
-            expr.bind(variable_scope, macro_scope)
+        for i, expr in enumerate(self):
+            self[i] = expr.bind(variable_scope, macro_scope)
         return self
 
     @cached
-    def eval(self) -> ValueType:
-        if len(self._sub_expressions) < 1:
+    def eval(self) -> Any:
+        if len(self) < 1:
             return None
-        func, *args = self._sub_expressions
+        func, *args = self
         func = func.eval()
-        res = func(*args)
+        res = func(args)
         return res
-
-    def print(self) -> str:
-        return '(' + ' '.join(e.print() for e in self._sub_expressions) + ')'
-
-
-def Eval(expr: Expression, scope: Union[None, Scope] = None) -> Any:
-    pass
-
-
-def Print(expr: Expression) -> str:
-    return expr.print()
