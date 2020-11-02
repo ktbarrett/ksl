@@ -88,7 +88,7 @@ class Parameter(Name):
 class ListExpression(tuple, Expression):
 
     def __new__(cls, sub_expressions: List[Expression], **info: Any):
-        s = tuple._new__(cls, sub_expressions)
+        s = tuple.__new__(cls, sub_expressions)
         s._info = info
         return s
 

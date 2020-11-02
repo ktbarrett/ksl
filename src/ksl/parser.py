@@ -6,7 +6,7 @@ from .utils import window
 from .engine import Expression, ListExpression, Name, Literal
 
 
-def parse(*, source: Optional[Iterable[str]] = None, filename: Optional[Union[str, PathLike]] = None) -> Expression:
+def parse(source: Optional[Iterable[str]] = None, filename: Optional[Union[str, PathLike]] = None) -> Expression:
     if source is not None:
         if filename is None:
             filename = "(anonymous)"
@@ -42,188 +42,147 @@ class Parser:
             else:
                 self._charno += 1
 
-    @property
-    def filename(self) -> str:
-        return self._filename
-
-    @property
-    def lineno(self) -> int:
-        return self._lineno
-
-    @property
-    def charno(self) -> int:
-        return self._charno
-
-    @property
-    def curr(self):
-        return self._curr
-
-    @property
-    def prev(self):
-        return self._prev
-
-    def step(self) -> str:
+    def _step(self) -> str:
         """ Step to the next character in the input """
-        try:
-            value = next(self._iter)
-        except StopIteration:
-            pass
-        return value
+        return next(self._iter)
 
     @property
-    def finished(self):
+    def _finished(self):
         return self._curr is None
 
-    def error(self, msg: str) -> None:
+    def _error(self, msg: str) -> None:
         """ Create and raise a ParseError """
-        raise ParseError(f"{self.filename}:{self.lineno},{self.charno} | " + msg)
+        raise ParseError(f"{self._filename}:{self._lineno},{self._charno} | " + msg)
 
-    def parse_whitespace(self) -> None:
+    def _parse_whitespace(self) -> None:
         # consume any empty space
-        while self.curr is not None and self.curr.isspace():
-            self.step()
+        while not self._finished and self._curr.isspace():
+            self._step()
 
     def parse(self) -> Expression:
         """ Top level parser entry function for scripts """
-        self.parse_whitespace()
+        self._parse_whitespace()
         # if end of string the input was just whitespace
-        if self.finished:
-            self.error(f"Empty top-level expression")
+        if self._finished:
+            self._error(f"Empty top-level expression")
         # parse an expression
-        res = self.parse_expr()
+        res = self._parse_expr()
         # consume any empty space
-        self.parse_whitespace()
+        self._parse_whitespace()
         # unexpectedly got something else
-        if not self.finished:
-            self.error(f"Invalid top-level expression")
+        if not self._finished:
+            self._error(f"Invalid top-level expression")
         return res
 
-    def parse_expr(self) -> Expression:
+    def _parse_expr(self) -> Expression:
         """
         Parses the next expression
 
         EXPR := ATOM | LIST_EXPR
         """
-        self.parse_whitespace()
         # decide how to parse expression, is it a list, an atom, or malformed?
-        if self.curr == '(':
-            return self.parse_list_expression()
-        elif self.curr == ')':
-            self.error(f"Unexpected ')'")
-        return self.parse_atom()
+        if self._curr == '(':
+            return self._parse_list_expression()
+        return self._parse_atom()
 
-    def parse_list_expression(self) -> ListExpression:
+    def _parse_list_expression(self) -> ListExpression:
         """
         Parses the next list expression
 
         LIST_EXPR := '(' WS* (EXPR WS+)* EXPR? WS* ')'
         """
-        self.parse_whitespace()
-        # ensure we are at the start of a valid list expression
-        if self.curr != '(':
-            self.error(f"Expecting '(' to start a list expression; found '{self.curr}' instead")
-        start_line = self.lineno
-        start_char = self.charno
+        start_line = self._lineno
+        start_char = self._charno
         # consume '('
-        self.step()
+        self._step()
         sub_expressions = []
         while True:
             # consume any empty space
-            self.parse_whitespace()
-            if self.finished:
-                self.error(f"List expression starting at {self.filename}:{start_line},{start_char} does not terminate")
+            self._parse_whitespace()
+            if self._finished:
+                self._error(f"List expression starting at {self._filename}:{start_line},{start_char} does not terminate")
             # if ')' the list expression is done, otherwise parse the next thing as a sub expression
-            if self.curr == ')':
+            if self._curr == ')':
                 break
             else:
-                expr = self.parse_expr()
+                expr = self._parse_expr()
                 sub_expressions.append(expr)
         # consume ')'
-        self.step()
+        self._step()
         # yield a list expression
         return ListExpression(
             sub_expressions,
-            filename=self.filename,
+            filename=self._filename,
             start_line=start_line,
             start_char=start_char,
-            end_line=self.lineno,
-            end_char=self.charno)
+            end_line=self._lineno,
+            end_char=self._charno)
 
-    def parse_atom(self) -> Expression:
+    def _parse_atom(self) -> Expression:
         """
         Parses the next atom
 
         ATOM := LITERAL | NAME
         """
-        self.parse_whitespace()
         # decide how to parse atom, is it a quoted literal, a name, or malformed?
-        if self.curr in ('\'', '\"'):
-            return self.parse_literal()
-        elif self.curr in ('(', ')'):
-            self.error(f"Unexpected '{self.curr}'")
-        return self.parse_name()
+        if self._curr in ('\'', '\"'):
+            return self._parse_literal()
+        return self._parse_name()
 
-    def parse_literal(self) -> Literal:
+    def _parse_literal(self) -> Literal:
         """ Parses the next literal """
-        self.parse_whitespace()
-        # ensure we have a valid literal
-        if self.curr not in ('\'', '\"'):
-            self.error(f"Expecting ' or \" to start literal; found '{self.curr}' instead")
-        start_quote = self.curr
-        start_line = self.lineno
-        start_char = self.charno
+        start_line = self._lineno
+        start_char = self._charno
+        # consume the quote
+        start_quote = self._curr
+        self._step()
         # consume everything between quotes
-        token = [self.curr]
+        token = []
         while True:
-            token.append(self.step())
             # if we reach the end of input, the string did not terminate
-            if self.finished:
-                self.error(f"Literal starting at {self.filename}:{start_line},{start_char} does not terminate")
+            if self._finished:
+                self._error(f"Literal starting at {self._filename}:{start_line},{start_char} does not terminate")
             # strings end when matching an unescaped quote of the same type that started the literal
-            if self.curr == start_quote and self.prev != '\\':
+            if self._curr == start_quote and self._prev != '\\':
+                # consume the ending quote and leave
+                self._step()
                 break
-        self.step()
+            token.append(self._curr)
+            self._step()
         # try to eval string
-        token_str = ''.join(token)
+        token_str = '"""' + ''.join(token) + '"""'
         try:
             value = literal_eval(token_str)
         except Exception:
-            self.error(f"Could not parse literal {token_str!r} correctly")
+            self._error(f"Could not parse literal {token_str!r} correctly")
         # yield the literal
         return Literal(
             value,
-            filename=self.filename,
+            filename=self._filename,
             start_line=start_line,
             start_char=start_char,
-            end_line=self.lineno,
-            end_char=self.charno)
+            end_line=self._lineno,
+            end_char=self._charno)
 
-    def parse_name(self) -> Name:
+    def _parse_name(self) -> Name:
         r"""
         Parses the next name
 
         NAME := \S+
         """
-        self.parse_whitespace()
-        # ensure we have a valid name
-        if self.curr in ('\'', '\"'):
-            self.error(f"Expecting a name; found a literal instead")
-        if self.curr in (')', '('):
-            self.error(f"Expecting a name; found '{self.curr}' instead")
-        start_line = self.lineno
-        start_char = self.charno
+        start_line = self._lineno
+        start_char = self._charno
         # consume name
-        token = [self.curr]
-        while True:
-            self.curr is not None and not self.curr.isspace() and self.curr not in ('(', ')')
-            self.step()
-            token.append(self.curr)
+        token = []
+        while not self._finished and not self._curr.isspace() and self._curr not in ('(', ')'):
+            token.append(self._curr)
+            self._step()
         # yield a name
         token = ''.join(token)
         return Name(
             token,
-            filename=self.filename,
+            filename=self._filename,
             start_line=start_line,
             start_char=start_char,
-            end_line=self.lineno,
-            end_char=self.charno)
+            end_line=self._lineno,
+            end_char=self._charno)
