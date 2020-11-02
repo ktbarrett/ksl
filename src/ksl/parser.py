@@ -13,7 +13,7 @@ def parse(source: Optional[Iterable[str]] = None, filename: Optional[Union[str, 
         else:
             filename = str(filename)
     elif filename is not None:
-        source = open(filename)
+        source = (char for line in open(filename) for char in line)
     else:
         raise ValueError("Must provide either a source, filename, or both to parser")
     p = Parser(source=source, filename=str(filename))
@@ -100,7 +100,8 @@ class Parser:
             # consume any empty space
             self._parse_whitespace()
             if self._finished:
-                self._error(f"List expression starting at {self._filename}:{start_line},{start_char} does not terminate")
+                msg = f"List expression starting at {self._filename}:{start_line},{start_char} does not terminate"
+                self._error(msg)
             # if ')' the list expression is done, otherwise parse the next thing as a sub expression
             if self._curr == ')':
                 break
@@ -153,8 +154,8 @@ class Parser:
         token_str = '"""' + ''.join(token) + '"""'
         try:
             value = literal_eval(token_str)
-        except Exception:
-            self._error(f"Could not parse literal {token_str!r} correctly")
+        except Exception:  # pragma: no cover
+            self._error(f"Could not parse literal {token_str!r} correctly")  # pragma: no cover
         # yield the literal
         return Literal(
             value,
