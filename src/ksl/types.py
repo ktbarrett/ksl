@@ -12,8 +12,6 @@ ValueType = Any
 
 FunctionType = Callable[[List['Expression']], ValueType]
 
-MacroFunctionType = Callable[['ListExpression'], 'Expression']
-
 
 from .engine import Expression, ListExpression  # noqa: E402
 

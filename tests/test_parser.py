@@ -20,7 +20,7 @@ def test_literal():
     a = parser.parse(test_str)
 
     assert isinstance(a, engine.Literal)
-    assert a == """ wowo "
+    assert a.value == """ wowo "
     asjasd '" """
 
 
@@ -41,8 +41,8 @@ def test_list_expression():
     assert isinstance(a[0], engine.Name) and a[0] == "jej"
     assert isinstance(a[1], engine.ListExpression)
     assert isinstance(a[1][0], engine.Name) and a[1][0] == "+"
-    assert isinstance(a[1][1], engine.Literal) and a[1][1] == '1'
-    assert isinstance(a[1][2], engine.Literal) and a[1][2] == '2'
+    assert isinstance(a[1][1], engine.Literal) and a[1][1].value == '1'
+    assert isinstance(a[1][2], engine.Literal) and a[1][2].value == '2'
 
 
 def test_unterminated_list_expression():
