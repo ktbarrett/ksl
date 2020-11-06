@@ -125,18 +125,19 @@ class ListExpression(tuple, Expression):
 
     def bind(self, variable_scope: Scope[Expression], macro_scope: Scope[MacroFunctionType]) -> Expression:
         func = self[0]
-        if isinstance(func, Name) and func in macro_scope:
-            macro = macro_scope[func]
-            changed = macro(self, variable_scope, macro_scope)
-            return changed.bind(variable_scope, macro_scope)
+        new_var_scope = Scope(variable_scope)
+        new_macro_scope = Scope(macro_scope)
+        if isinstance(func, Name) and func in new_macro_scope:
+            macro = new_macro_scope[func]
+            changed = macro(self, new_var_scope, new_macro_scope)
+            return changed.bind(new_var_scope, new_macro_scope)
         return ListExpression(
-            expr.bind(variable_scope, macro_scope)
+            expr.bind(new_var_scope, new_macro_scope)
             for expr in self)
 
     @cached
     def eval(self) -> ValueType:
         func, *args = self
-        print(func, args)
         func = func.eval()
         res = func(*args)
         return res
@@ -147,13 +148,17 @@ class Function:
     def __init__(self, params: List[str], body: Expression, name: Optional[str] = None):
         self._params = params
         self._body = body
-        self._name = name if name is not None else "(anonymous)"
+        self._name = name if name is not None else "anonymous"
 
     def __call__(self, *args: Expression):
         if len(args) != len(self._params):
             raise TypeError(f"{self._name} takes {len(self._params)} arguments, but {len(args)} were given")
-        params: Scope[Expression] = Scope()
+        scope: Scope[Expression] = Scope()
+        # bind arguments to parameters and resolve
         for param, arg in zip(self._params, args):
-            params[param] = arg
-        body = self._body.bind(params, Scope[MacroFunctionType]())
+            scope[param] = arg
+        # bind function name for recursive calls
+        scope[self._name] = Literal(self)
+        # finish resolving all parameters and recursive calls
+        body = self._body.bind(scope, Scope[MacroFunctionType]())
         return body.eval()
