@@ -1,4 +1,4 @@
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Union, List
 from os import PathLike
 from itertools import chain
 from ast import literal_eval
@@ -29,7 +29,6 @@ class Parser:
         self._lineno = 1
         self._charno = 1
         self._iter = self._iterate(source)
-        self._finished = False
         next(self._iter)  # set first values for prev and curr
 
     def _iterate(self, source: Iterable[str]):
@@ -40,7 +39,8 @@ class Parser:
                 self._charno = 1
             else:
                 self._charno += 1
-        self._finished = True
+        self._prev = None
+        self._curr = None
 
     def _step(self) -> None:
         """ Step to the next character in the input """
@@ -55,21 +55,21 @@ class Parser:
 
     def _parse_whitespace(self) -> None:
         # consume any empty space
-        while not self._finished and self._curr.isspace():
+        while self._curr is not None and self._curr.isspace():
             self._step()
 
     def parse(self) -> Expression:
         """ Top level parser entry function for scripts """
         self._parse_whitespace()
         # if end of string the input was just whitespace
-        if self._finished:
+        if self._curr is None:
             self._error(f"Empty top-level expression")
         # parse an expression
         res = self._parse_expr()
         # consume any empty space
         self._parse_whitespace()
         # unexpectedly got something else
-        if not self._finished:
+        if self._curr is not None:
             self._error(f"Invalid top-level expression")
         return res
 
@@ -103,12 +103,13 @@ class Parser:
         while True:
             expr = self._parse_expr()
             sub_expressions.append(expr)
-            if self._finished:
+            if self._curr is None:
                 msg = f"List expression starting at {self._filename}:{start_line},{start_char} does not terminate"
                 self._error(msg)
-            if self._curr == ')':
+            elif self._curr == ')':
+                # end of list expression
                 break
-            if not self._curr.isspace():
+            elif not self._curr.isspace():
                 self._error("Missing whitespace?")
             # consume any empty space
             self._parse_whitespace()
@@ -142,19 +143,19 @@ class Parser:
         start_quote = self._curr
         self._step()
         # consume everything between quotes
-        token = []
+        token: List[str] = []
         while True:
             # if we reach the end of input, the string did not terminate
-            if self._finished:
+            if self._curr is None:
                 self._error(f"Literal starting at {self._filename}:{start_line},{start_char} does not terminate")
             # strings end when matching an unescaped quote of the same type that started the literal
-            if self._curr == start_quote:
-                if self._prev != '\\':
-                    # consume the ending quote and leave
-                    self._step()
-                    break
-            token.append(self._curr)
-            self._step()
+            elif self._curr == start_quote and self._prev != '\\':
+                # consume the ending quote and leave
+                self._step()
+                break
+            else:
+                token.append(self._curr)
+                self._step()
         # try to eval string
         token_str = '"""' + ''.join(token) + '"""'
         try:
@@ -180,14 +181,14 @@ class Parser:
         start_line = self._lineno
         start_char = self._charno
         # consume name
-        token = []
-        while not self._finished and not self._curr.isspace() and self._curr not in delimeters:
+        token: List[str] = []
+        while self._curr is not None and not self._curr.isspace() and self._curr not in delimeters:
             token.append(self._curr)
             self._step()
         # yield a name
-        token = ''.join(token)
+        token_str = ''.join(token)
         return Name(
-            token,
+            token_str,
             filename=self._filename,
             start_line=start_line,
             start_char=start_char,
