@@ -31,7 +31,7 @@ def test_name_found():
 def test_list_expression():
 
     env = Scope()
-    env['+'] = Literal(lambda args: sum(arg.eval() for arg in args))
+    env['+'] = Literal(lambda a, b, c: a.eval() + b.eval() + c.eval())
 
     test_expr = ListExpression((
         Name('+'),
@@ -54,14 +54,14 @@ def test_function():
     params = ['a', 'b']
 
     body = ListExpression((
-        Literal(lambda args: sum(arg.eval() for arg in args)),
+        Literal(lambda a, b: a.eval() + b.eval()),
         Name('a'),
         Name('b')))
 
     func = Literal(Function(params, body, name="add"))
 
     test_expr = ListExpression((
-        Literal(lambda args: sum(arg.eval() for arg in args)),
+        Literal(lambda a, b: a.eval() + b.eval()),
         ListExpression((
             func,
             Literal(1),
@@ -80,7 +80,7 @@ def test_function_not_enough_args():
     params = ['a', 'b']
 
     body = ListExpression((
-        Literal(lambda args: sum(arg.eval() for arg in args)),
+        Literal(lambda a, b: a.eval() + b.eval()),
         Name('a'),
         Name('b')))
 
@@ -99,7 +99,7 @@ def test_function_too_many_args():
     params = ['a', 'b']
 
     body = ListExpression((
-        Literal(lambda args: sum(arg.eval() for arg in args)),
+        Literal(lambda a, b: a.eval() + b.eval()),
         Name('a'),
         Name('b')))
 

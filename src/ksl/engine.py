@@ -1,11 +1,12 @@
 from typing import Any, Union, Dict, List, TypeVar, Callable, Optional, Iterable
+from mypy_extensions import VarArg
 from abc import ABC, abstractmethod
 from .utils import cached
 
 
 ValueType = Any
 
-FunctionType = Callable[[List['Expression']], 'ValueType']
+FunctionType = Callable[[VarArg('Expression')], 'ValueType']
 
 # mypy does not support this in any way
 # MacroFunctionType = Callable[['ListExpression', 'Scope[ValueType]', 'Scope[MacroFunctionType]'], 'Expression']
@@ -80,6 +81,9 @@ class Literal(Expression):
     def eval(self) -> ValueType:
         return self._value
 
+    def __repr__(self):
+        return repr(self._value)
+
 
 class Name(str, Expression):
     _info: Dict[str, Any]
@@ -132,8 +136,9 @@ class ListExpression(tuple, Expression):
     @cached
     def eval(self) -> ValueType:
         func, *args = self
+        print(func, args)
         func = func.eval()
-        res = func(args)
+        res = func(*args)
         return res
 
 
@@ -144,9 +149,9 @@ class Function:
         self._body = body
         self._name = name if name is not None else "(anonymous)"
 
-    def __call__(self, args: List[Expression]):
+    def __call__(self, *args: Expression):
         if len(args) != len(self._params):
-            raise TypeError(f"")
+            raise TypeError(f"{self._name} takes {len(self._params)} arguments, but {len(args)} were given")
         params: Scope[Expression] = Scope()
         for param, arg in zip(self._params, args):
             params[param] = arg
