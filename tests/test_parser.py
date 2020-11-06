@@ -99,8 +99,8 @@ def test_parser_file(tmpdir):
 
     assert isinstance(a, engine.ListExpression)
     assert isinstance(a[0], engine.Name) and a[0] == '+'
-    assert isinstance(a[1], engine.Name) and a[1] == '1'
-    assert isinstance(a[2], engine.Name) and a[2] == '2'
+    assert isinstance(a[1], engine.Literal) and a[1].value == 1
+    assert isinstance(a[2], engine.Literal) and a[2].value == 2
 
 
 def test_no_space_between_name_and_list_expression():

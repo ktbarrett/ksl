@@ -133,7 +133,7 @@ class Parser:
         # decide how to parse atom, is it a quoted literal, a name, or malformed?
         if self._curr in ('\'', '\"'):
             return self._parse_literal()
-        return self._parse_name()
+        return self._parse_other_atom()
 
     def _parse_literal(self) -> Literal:
         """ Parses the next literal """
@@ -171,11 +171,12 @@ class Parser:
             end_line=self._lineno,
             end_char=self._charno)
 
-    def _parse_name(self) -> Name:
+    def _parse_other_atom(self) -> Union[Name, Literal]:
         r"""
-        Parses the next name
+        Parses the next name or the next number literal
 
-        NAME := \S+
+        NUMBER|NAME := \S+
+        NUMBER is whatever parses as an `int` or `float` using `literal_eval`
         """
         delimeters = (')', '(', '\'', '\"')
         start_line = self._lineno
@@ -187,8 +188,19 @@ class Parser:
             self._step()
         # yield a name
         token_str = ''.join(token)
-        return Name(
-            token_str,
+        try:
+            value = literal_eval(token_str)
+        except Exception:
+            value = token_str
+            T = Name
+        else:
+            if isinstance(value, (int, float)):
+                T = Literal
+            else:
+                value = token_str
+                T = Name
+        return T(
+            value,
             filename=self._filename,
             start_line=start_line,
             start_char=start_char,
