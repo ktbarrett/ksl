@@ -56,3 +56,14 @@ def test_let_and_scoping():
                 (let a 3)
                 (+ a b))))
         """) == 16
+
+
+def test_lambda_and_anonymous_name():
+
+    assert run("""
+        ((lambda (n) (cond
+            (= n 1) 1
+            (= n 2) 1
+                    (+ (anonymous (- n 1)) (anonymous (- n 2)))))
+            5)
+        """) == 5
