@@ -12,6 +12,12 @@ def test_name():
     assert isinstance(a, engine.Name)
     assert a == "Jeremy"
 
+    test_str = "{}"
+    a = parser.parse(test_str)
+
+    assert isinstance(a, engine.Name)
+    assert a == "{}"
+
 
 def test_literal():
 

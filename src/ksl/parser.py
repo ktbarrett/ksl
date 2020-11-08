@@ -1,4 +1,4 @@
-from typing import Iterable, Optional, Union, List
+from typing import Iterable, Optional, Union, List, Any, Type
 from os import PathLike
 from itertools import chain
 from ast import literal_eval
@@ -9,7 +9,7 @@ from .engine import Expression, ListExpression, Name, Literal
 def parse(source: Optional[Iterable[str]] = None, filename: Optional[Union[str, PathLike]] = None) -> Expression:
     if source is not None:
         if filename is None:
-            filename = "(anonymous)"
+            filename = "unknown"
     elif filename is not None:
         source = (char for line in open(filename) for char in line)
     else:
@@ -188,6 +188,8 @@ class Parser:
             self._step()
         # yield a name
         token_str = ''.join(token)
+        T: Union[Type[Literal], Type[Name]]
+        value: Any
         try:
             value = literal_eval(token_str)
         except Exception:
