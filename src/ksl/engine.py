@@ -48,10 +48,6 @@ class Scope(MutableMapping[str, T]):
         self._scope: Dict[str, T] = {}
         self._parent = parent
 
-    @property
-    def parent(self) -> Union[None, Mapping[str, T]]:
-        return self._parent
-
     def __getitem__(self, item: str) -> T:
         if item in self._scope:
             return self._scope[item]
@@ -64,7 +60,7 @@ class Scope(MutableMapping[str, T]):
         self._scope[item] = value
 
     def __delitem__(self, item: str) -> None:
-        del self._scope[item]
+        raise NotImplementedError("Scopes do not support removing elements")  # pragma: no cover
 
     def __iter__(self) -> Iterator[str]:
         yield from self._scope
@@ -139,6 +135,9 @@ class ListExpression(tuple, Expression):
     @property
     def info(self) -> Dict[str, Any]:
         return self._info  # pragma: no cover
+
+    def __repr__(self) -> str:
+        return '(' + ' '.join(repr(elem) for elem in self) + ')'
 
     def bind(self, variable_scope: Scope[Expression], macro_scope: Scope[MacroFunctionType]) -> Expression:
         func = self[0]
