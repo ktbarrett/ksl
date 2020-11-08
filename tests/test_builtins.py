@@ -44,3 +44,15 @@ def test_define_function():
     """
 
     assert run(src) == 5
+
+
+def test_let_and_scoping():
+
+    assert run("""
+        (do
+            (let a 5)
+            (let b 8)
+            (+ a (do
+                (let a 3)
+                (+ a b))))
+        """) == 16
