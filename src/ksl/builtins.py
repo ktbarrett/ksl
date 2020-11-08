@@ -134,8 +134,8 @@ def iffunc(cond: Expression, a: Expression, b: Expression) -> Any:
 def cond(*args: Expression) -> Any:
     if len(args) % 2 != 1:
         raise TypeError("Incorrect number of arguments")
-    for i in range(len(args) - 1, 2):
-        check, res = args[i:(i + 1)]
+    for i in range(0, len(args) - 1, 2):
+        check, res = args[i:(i + 2)]
         if check.eval():
             return res.eval()
     return args[-1].eval()
