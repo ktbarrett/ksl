@@ -1,6 +1,7 @@
-from typing import Any, Union, Dict, List, TypeVar, Callable, Optional, Iterable
+from typing import Any, Union, Dict, List, TypeVar, Callable, Optional, Iterable, Iterator
 from mypy_extensions import VarArg
 from abc import ABC, abstractmethod
+from typing import MutableMapping, Mapping
 from .utils import cached
 
 
@@ -41,23 +42,39 @@ class Expression(ABC):
         pass  # pragma: no cover
 
 
-class Scope(Dict[str, T]):
+class Scope(MutableMapping[str, T]):
 
-    def __init__(self, parent: Union[None, Dict[str, T]] = None):
-        super().__init__()
+    def __init__(self, parent: Union[None, Mapping[str, T]] = None):
+        self._scope: Dict[str, T] = {}
         self._parent = parent
 
     @property
-    def parent(self) -> Union[None, Dict[str, T]]:
+    def parent(self) -> Union[None, Mapping[str, T]]:
         return self._parent
 
     def __getitem__(self, item: str) -> T:
-        if item in self:
-            return super().__getitem__(item)
+        if item in self._scope:
+            return self._scope[item]
         elif self._parent is not None:
             return self._parent[item]
         else:
             raise KeyError(repr(item))
+
+    def __setitem__(self, item: str, value: T) -> None:
+        self._scope[item] = value
+
+    def __delitem__(self, item: str) -> None:
+        del self._scope[item]
+
+    def __iter__(self) -> Iterator[str]:
+        yield from self._scope
+        if self._parent is not None:
+            for name in self._parent:
+                if name not in self._scope:
+                    yield name
+
+    def __len__(self) -> int:
+        return sum(1 for _ in self)
 
 
 class Literal(Expression):
@@ -106,7 +123,7 @@ class Name(str, Expression):
             return expr
 
     def eval(self) -> ValueType:
-        raise RuntimeError("Attempted evaluating unbound name")
+        raise RuntimeError(f"Attempted evaluating unbound name: {self}")
 
 
 class ListExpression(tuple, Expression):

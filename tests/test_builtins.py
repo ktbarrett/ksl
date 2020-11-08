@@ -19,15 +19,28 @@ def test_string():
     assert run("(str (% (int '10') (int '3')))") == '1'
 
 
+def test_equals():
+    assert run("""
+        (= (- 2 1) 1)""")
+
+
+def test_cond():
+    assert run("""
+        (cond
+            (= 0 1) 0
+            (= 0 0) 1
+            0)""")
+
+
 def test_define_function():
 
     src = """
     (do
         (def fib (n) (cond
-            (= n 0) 1
             (= n 1) 1
+            (= n 2) 1
                     (+ (fib (- n 1)) (fib (- n 2)))))
-        (fib 21))
+        (fib 5))
     """
 
-    assert run(src) == 10946
+    assert run(src) == 5
