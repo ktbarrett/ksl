@@ -1,6 +1,5 @@
 from typing import TypeVar, Optional, Callable, Any
 from .engine import Expression, Scope, MacroFunctionType, Literal, ListExpression, ValueType, Name, Function
-from . import run
 
 
 builtin_variables = Scope[Expression]()
@@ -152,6 +151,7 @@ def dofunc(statement: Expression, *statements: Expression) -> Any:
 
 @builtin_function('eval')
 def evalfunc(expr: Expression) -> Any:
+    from .run import run
     expr_str = expr.eval()
     return run(expr_str)
 
