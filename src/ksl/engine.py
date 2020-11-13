@@ -126,8 +126,6 @@ class ListExpression(tuple, Expression):
     _info: Dict[str, Any]
 
     def __new__(cls, sub_expressions: Iterable[Expression], **info: Any):
-        if not sub_expressions:
-            raise ValueError("List expressions cannot be empty")
         s = tuple.__new__(cls, sub_expressions)
         s._info = info
         return s

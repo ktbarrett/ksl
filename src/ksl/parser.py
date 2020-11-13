@@ -22,6 +22,18 @@ class ParseError(Exception):
     pass
 
 
+class UnmatchedRParen(ParseError):
+    pass
+
+
+class UnmatchedLParen(ParseError):
+    pass
+
+
+class UnterminatedStringLiteral(ParseError):
+    pass
+
+
 class Parser:
 
     def __init__(self, source: Iterable[str], filename: str):
@@ -49,10 +61,6 @@ class Parser:
         except StopIteration:
             pass
 
-    def _error(self, msg: str) -> None:
-        """ Create and raise a ParseError """
-        raise ParseError(f"{self._filename}:{self._lineno},{self._charno} | " + msg)
-
     def _parse_whitespace(self) -> None:
         # consume any empty space
         while self._curr is not None and self._curr.isspace():
@@ -63,14 +71,16 @@ class Parser:
         self._parse_whitespace()
         # if end of string the input was just whitespace
         if self._curr is None:
-            self._error(f"Empty top-level expression")
+            return Literal(None)
         # parse an expression
         res = self._parse_expr()
         # consume any empty space
         self._parse_whitespace()
         # unexpectedly got something else
+        if self._curr == ')':
+            raise UnmatchedRParen()
         if self._curr is not None:
-            self._error(f"Invalid top-level expression")
+            raise ParseError(f"Invalid top-level expression")
         return res
 
     def _parse_expr(self) -> Expression:
@@ -95,26 +105,28 @@ class Parser:
         # consume '('
         self._step()
         sub_expressions = []
-        # consume any empty space
-        self._parse_whitespace()
-        if self._curr == ')':
-            msg = f"List expression starting at {self._filename}:{start_line},{start_char} is empty"
-            self._error(msg)
         while True:
-            expr = self._parse_expr()
-            sub_expressions.append(expr)
             if self._curr is None:
-                msg = f"List expression starting at {self._filename}:{start_line},{start_char} does not terminate"
-                self._error(msg)
+                raise UnmatchedLParen()
+            elif self._curr.isspace():
+                self._step()
             elif self._curr == ')':
-                # end of list expression
+                self._step()
                 break
-            elif not self._curr.isspace():
-                self._error("Missing whitespace?")
-            # consume any empty space
-            self._parse_whitespace()
-        # consume ')'
-        self._step()
+            else:
+                expr = self._parse_expr()
+                sub_expressions.append(expr)
+                if self._curr is None:
+                    raise UnmatchedLParen()
+                elif self._curr.isspace():
+                    self._step()
+                elif self._curr == ')':
+                    self._step()
+                    break
+                else:
+                    raise ParseError("Missing whitespace?")
+        if len(sub_expressions) == 0:
+            return Literal(None)
         # yield a list expression
         return ListExpression(
             sub_expressions,
@@ -147,7 +159,7 @@ class Parser:
         while True:
             # if we reach the end of input, the string did not terminate
             if self._curr is None:
-                self._error(f"Literal starting at {self._filename}:{start_line},{start_char} does not terminate")
+                raise UnterminatedStringLiteral()
             # strings end when matching an unescaped quote of the same type that started the literal
             elif self._curr == start_quote and self._prev != '\\':
                 # consume the ending quote and leave
@@ -158,10 +170,7 @@ class Parser:
                 self._step()
         # try to eval string
         token_str = '"""' + ''.join(token) + '"""'
-        try:
-            value = literal_eval(token_str)
-        except Exception:  # pragma: no cover
-            self._error(f"Could not parse literal {token_str!r} correctly")  # pragma: no cover
+        value = literal_eval(token_str)
         # yield the literal
         return Literal(
             value,

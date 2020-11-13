@@ -72,8 +72,7 @@ def test_bad_toplevel():
     with pytest.raises(parser.ParseError):
         parser.parse(" 1  2")
 
-    with pytest.raises(parser.ParseError):
-        parser.parse("   ")
+    assert parser.parse("  ").value is None
 
 
 def test_parser_empty():
@@ -88,9 +87,11 @@ def test_parser_error():
     (
       1 2""")
 
-    with pytest.raises(parser.ParseError) as err:
-        parser.parse(test_str, "lol.ksl")
-        assert str(err).startswith("lol.ksl:3:6")
+    with pytest.raises(parser.ParseError):
+        parser.parse(test_str)
+
+    with pytest.raises(parser.ParseError):
+        parser.parse("(")
 
 
 def test_parser_file(tmpdir):
@@ -121,13 +122,6 @@ def test_no_space_between_name_and_literal():
         parser.parse("(int'12')")
 
 
-def test_empty_list_expression():
+def test_empty_list_expr():
 
-    with pytest.raises(parser.ParseError):
-        parser.parse("()")
-
-
-def test_no_space_between_two_list_expressions():
-
-    with pytest.raises(parser.ParseError):
-        parser.parse("((a)(b))")
+    assert parser.parse("()").value is None

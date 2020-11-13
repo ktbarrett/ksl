@@ -65,12 +65,6 @@ def test_list_expression():
     assert r == 6
 
 
-def test_empty_list_expression():
-
-    with pytest.raises(ValueError):
-        ListExpression(())
-
-
 def test_function():
 
     params = ['a', 'b']
