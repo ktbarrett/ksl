@@ -5,3 +5,4 @@ __pycache__/
 /prof/
 .coverage
 /htmlcov/
+/src/ksl/_version.py
