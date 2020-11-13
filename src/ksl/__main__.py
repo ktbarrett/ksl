@@ -3,7 +3,7 @@ import sys
 from .run import repl, run
 
 
-def main(scriptname: str, *args: str) -> int:
+def main_args(*args: str) -> int:
 
     parser = argparse.ArgumentParser(description="Kaleb's Shitty LISP")
     parser.add_argument("script", nargs='?')
@@ -20,5 +20,9 @@ def main(scriptname: str, *args: str) -> int:
             return 0 if bool(res) else 1
 
 
+def main():
+    sys.exit(main_args(*sys.argv[1:]))
+
+
 if __name__ == "__main__":
-    sys.exit(main(*sys.argv))
+    main()

@@ -3,7 +3,7 @@ import traceback
 from .engine import eval, Expression, Scope, MacroFunctionType
 from .parser import parse
 from .builtins import builtin_variables, builtin_macros
-from ._version import __version__
+from ._version import version
 
 
 def run(
@@ -23,7 +23,7 @@ def run(
 def repl() -> None:
     variables = Scope(builtin_variables)
     macros = Scope(builtin_macros)
-    print(f"Kaleb's Shitty LISP\nversion {__version__}")
+    print(f"Kaleb's Shitty LISP\nversion {version}")
     while True:
         print("> ", end="")
         try:
