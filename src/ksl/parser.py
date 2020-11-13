@@ -61,21 +61,19 @@ class Parser:
         except StopIteration:
             pass
 
-    def _parse_whitespace(self) -> None:
+    def parse(self) -> Expression:
+        """ Top level parser entry function for scripts """
         # consume any empty space
         while self._curr is not None and self._curr.isspace():
             self._step()
-
-    def parse(self) -> Expression:
-        """ Top level parser entry function for scripts """
-        self._parse_whitespace()
         # if end of string the input was just whitespace
         if self._curr is None:
             return Literal(None)
         # parse an expression
         res = self._parse_expr()
         # consume any empty space
-        self._parse_whitespace()
+        while self._curr is not None and self._curr.isspace():
+            self._step()
         # unexpectedly got something else
         if self._curr == ')':
             raise UnmatchedRParen()
