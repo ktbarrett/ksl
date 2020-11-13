@@ -28,13 +28,13 @@ def repl() -> None:
         print("> ", end="")
         try:
             expr = input()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, EOFError):
             print()
             print("Exiting REPL")
             return
         try:
             res = run(expr, variable_scope=variables, macro_scope=macros)
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, EOFError):
             print("Killing expression evaluation")
         except Exception:
             traceback.print_exc()
