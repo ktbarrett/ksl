@@ -25,9 +25,8 @@ def repl() -> None:
     macros = Scope(builtin_macros)
     print(f"Kaleb's Shitty LISP\nversion {version}")
     while True:
-        print("> ", end="")
         try:
-            expr = input()
+            expr = input('> ')
         except (KeyboardInterrupt, EOFError):
             print()
             print("Exiting REPL")
