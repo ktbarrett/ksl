@@ -1,11 +1,14 @@
-from setuptools import setup, find_packages
+import os
 import pathlib
+from typing import Any, Dict, cast
+
+from setuptools import find_packages, setup
 
 
-def get_version(version_file):
-    locls = {}
+def get_version(version_file: "os.PathLike[str]") -> str:
+    locls: Dict[str, Any] = {}
     exec(open(version_file).read(), {}, locls)
-    return locls["__version__"]
+    return cast(str, locls["__version__"])
 
 
 here = pathlib.Path(__file__).parent.resolve()
@@ -37,5 +40,5 @@ setup(
     python_requires=">=3.6, <4",
     install_requires=[],
     entry_points={},
-    zip_safe=False
+    zip_safe=False,
 )
