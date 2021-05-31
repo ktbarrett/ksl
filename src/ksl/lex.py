@@ -12,7 +12,7 @@ class LexError(Exception):
 
 
 class Lexer(Iterator[Token]):
-    indentation_char: Optional[str]
+    indentation: Optional[str]
     curr: Token
     path: Path
     lineno: int
@@ -23,7 +23,13 @@ class Lexer(Iterator[Token]):
     _START = "START"
     _END = ""
 
-    def __init__(self, *, source: Union[str, TextIO], path: Path):
+    def __init__(
+        self,
+        *,
+        source: Union[str, TextIO],
+        path: Path,
+        indentation: Optional[str] = None,
+    ):
         self._source: TextIO
         if source is None:
             self._source = open(path)
@@ -31,7 +37,7 @@ class Lexer(Iterator[Token]):
             self._source = StringIO(source)
         else:
             self._source = source
-        self.indentation_char = None
+        self.indentation = indentation
         self.curr = self.START
         self.path = path
         self.lineno = 1
@@ -133,40 +139,46 @@ class Lexer(Iterator[Token]):
         while True:
             if self._curr in self._whitespace:
                 self._next()
-            elif self._curr in ("\n", self._START):
+                continue
+            if self._curr in ("\n", self._START):
                 self._next()
                 self._reset()
                 while self._curr in self._whitespace:
                     self._save_and_next()
                 if self._curr in ("\n", "#", self._END):
-                    pass
-                elif len(set(self._capture)) > 1:
-                    raise self._error("mixing indentation characters on the same line")
-                elif self.indentation_char is not None and any(
-                    c != self.indentation_char for c in self._capture
-                ):
-                    raise self._error("mixing indentation characters in the same file")
-                elif len(self._capture) > self._indentations[-1]:
-                    if self.indentation_char is None:
-                        self.indentation_char = self._capture[0]
-                    self._indentations.append(len(self._capture))
+                    continue
+                if self.indentation is None:
+                    if len(self._capture) == 0:
+                        return self._emit(TokenType.Nodent)
+                    if len(set(self._capture)) > 1:
+                        raise self._error(
+                            "detected indentation is comprised of both spaces and tabs"
+                        )
+                    self.indentation = "".join(self._capture)
+                capture = "".join(self._capture)
+                indents = len(capture) // len(self.indentation)
+                if capture != (self.indentation * indents):
+                    raise self._error("mixing indentation")
+                elif indents > self._indentations[-1]:
+                    self._indentations.append(indents)
                     return self._emit(TokenType.Indent)
-                elif len(self._capture) < self._indentations[-1]:
+                elif indents < self._indentations[-1]:
                     while len(self._capture) < self._indentations[-1]:
                         self._indentations.pop()
                         self._emit(TokenType.Dedent)
                     return
                 else:
                     return self._emit(TokenType.Nodent)
-            elif self._curr == "#":
+            if self._curr == "#":
                 while self._curr != "\n":
                     self._next()
-            elif self._curr == "-":
+                continue
+            if self._curr == "-":
                 if self._peek() in self._digits:
                     return self._capture_number()
                 else:
                     return self._capture_identifier()
-            elif self._curr == "0":
+            if self._curr == "0":
                 if self._peek() in ("x", "X"):
                     return self._capture_hex()
                 elif self._peek() in ("o", "O"):
@@ -175,48 +187,47 @@ class Lexer(Iterator[Token]):
                     return self._capture_binary()
                 else:
                     return self._capture_number()
-            elif self._curr in self._digits:
+            if self._curr in self._digits:
                 self._capture_number()
                 return
-            elif self._curr in self._identifier_chars or self._curr == "\\":
+            if self._curr in self._identifier_chars or self._curr == "\\":
                 self._capture_identifier()
                 return
-            elif self._curr in ('"', "'"):
+            if self._curr in ('"', "'"):
                 return self._capture_string()
-            elif self._curr == "(":
+            if self._curr == "(":
                 self._next()
                 return self._emit(TokenType.LParen)
-            elif self._curr == ")":
+            if self._curr == ")":
                 self._next()
                 return self._emit(TokenType.RParen)
-            elif self._curr == "{":
+            if self._curr == "{":
                 self._next()
                 return self._emit(TokenType.LCurly)
-            elif self._curr == "}":
+            if self._curr == "}":
                 self._next()
                 return self._emit(TokenType.RCurly)
-            elif self._curr == "[":
+            if self._curr == "[":
                 self._next()
                 return self._emit(TokenType.LBracket)
-            elif self._curr == "]":
+            if self._curr == "]":
                 self._next()
                 return self._emit(TokenType.RBracket)
-            elif self._curr == ":":
+            if self._curr == ":":
                 self._next()
                 return self._emit(TokenType.Colon)
-            elif self._curr == ",":
+            if self._curr == ",":
                 self._next()
                 return self._emit(TokenType.Comma)
-            elif self._curr == ";":
+            if self._curr == ";":
                 self._next()
                 return self._emit(TokenType.Semicolon)
-            elif self._curr == "`":
+            if self._curr == "`":
                 self._next()
                 return self._emit(TokenType.Tick)
-            elif self._curr == self._END:
+            if self._curr == self._END:
                 return self._emit(TokenType.End)
-            else:
-                raise self._error(f"unexpected character {self._curr!r}")
+            raise self._error(f"unexpected character {self._curr!r}")
 
     def _capture_identifier(self) -> None:
         self._reset()
@@ -350,5 +361,6 @@ class Lexer(Iterator[Token]):
 if __name__ == "__main__":  # pragma: no cover
     import sys
 
-    for token in Lexer(source=sys.stdin, path="(stdin)"):
+    lexer = Lexer(source=sys.stdin, path="(stdin)")
+    for token in lexer:
         print(token)

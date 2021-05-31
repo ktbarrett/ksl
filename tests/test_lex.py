@@ -141,8 +141,8 @@ def test_lex_program() -> None:
         12 -12 -12.01 -12e3
         -12.01e30 12. 12.E30
         0 -0
-          -
-            --wow abc
+            -
+                --wow abc
         "wow"
         """
     )
