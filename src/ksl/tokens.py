@@ -1,31 +1,102 @@
 from dataclasses import dataclass
-from enum import Enum, auto
 from typing import Any, Optional
-
-
-class TokenType(Enum):
-    Indent = auto()
-    Nodent = auto()
-    Dedent = auto()
-    Identifier = auto()
-    Integer = auto()
-    Float = auto()
-    String = auto()
-    LParen = auto()
-    RParen = auto()
-    LCurly = auto()
-    RCurly = auto()
-    LBracket = auto()
-    RBracket = auto()
-    Colon = auto()
-    Comma = auto()
-    Semicolon = auto()
-    Tick = auto()
-    Start = auto()
-    End = auto()
 
 
 @dataclass(frozen=True)
 class Token:
-    type: TokenType
     value: Optional[Any] = None
+
+
+@dataclass(frozen=True)
+class Indent(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class Nodent(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class Dedent(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class Identifier(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class Integer(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class Float(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class String(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class LParen(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class RParen(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class LCurly(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class RCurly(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class LBracket(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class RBracket(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class Colon(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class Comma(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class Semicolon(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class Tick(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class Start(Token):
+    pass
+
+
+@dataclass(frozen=True)
+class End(Token):
+    pass

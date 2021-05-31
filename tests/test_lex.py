@@ -1,15 +1,15 @@
 from io import StringIO
 from textwrap import dedent
-from typing import Any
+from typing import Any, Type
 
 import pytest
 
+import ksl.tokens as tokens
 from ksl.lex import Lexer, LexError
-from ksl.tokens import Token, TokenType
 
 
 def simple_test(
-    token_type: TokenType,
+    token_type: Type[tokens.Token],
     lex_method: str,
     src: str,
     expected_value: Any,
@@ -19,12 +19,12 @@ def simple_test(
     lexer = Lexer(source=StringIO(src), path=filepath)
     lexer.next()  # skips nodent
     t = lexer.next()
-    assert t == Token(type=token_type, value=expected_value)
+    assert t == token_type(expected_value)
 
 
 def test_lex_identifier() -> None:
     def identifier_test(src: str, expected_value: str) -> None:
-        simple_test(TokenType.Identifier, "_capture_identifier", src, expected_value)
+        simple_test(tokens.Identifier, "_capture_identifier", src, expected_value)
 
     identifier_test("src", "src")
     identifier_test("src ", "src")
@@ -42,7 +42,7 @@ def test_lex_identifier() -> None:
 
 def test_lex_int_hex() -> None:
     def hex_test(src: str, expected_value: int) -> None:
-        simple_test(TokenType.Integer, "_capture_hex", src, expected_value)
+        simple_test(tokens.Integer, "_capture_hex", src, expected_value)
 
     hex_test("0x1aF", 0x1AF)
     hex_test("0x1aF ", 0x1AF)
@@ -55,7 +55,7 @@ def test_lex_int_hex() -> None:
 
 def test_lex_int_octal() -> None:
     def octal_test(src: str, expected_value: int) -> None:
-        simple_test(TokenType.Integer, "_capture_octal", src, expected_value)
+        simple_test(tokens.Integer, "_capture_octal", src, expected_value)
 
     octal_test("0o174", 0o174)
     octal_test("0O174 ", 0o174)
@@ -70,7 +70,7 @@ def test_lex_int_octal() -> None:
 
 def test_lex_int_binary() -> None:
     def binary_test(src: str, expected_value: int) -> None:
-        simple_test(TokenType.Integer, "_capture_binary", src, expected_value)
+        simple_test(tokens.Integer, "_capture_binary", src, expected_value)
 
     binary_test("0b10", 0b10)
     binary_test("0b10 ", 0b10)
@@ -85,7 +85,7 @@ def test_lex_int_binary() -> None:
 
 def test_lex_int_decimal() -> None:
     def int_test(src: str, expected_value: int) -> None:
-        simple_test(TokenType.Integer, "_capture_number", src, expected_value)
+        simple_test(tokens.Integer, "_capture_number", src, expected_value)
 
     int_test("067", 67)
     int_test("0\n", 0)
@@ -97,7 +97,7 @@ def test_lex_int_decimal() -> None:
 
 def test_lex_float() -> None:
     def float_test(src: str, expected_value: float) -> None:
-        simple_test(TokenType.Float, "_capture_number", src, expected_value)
+        simple_test(tokens.Float, "_capture_number", src, expected_value)
 
     float_test("11.0", 11.0)
     float_test("1.0 ", 1.0)
@@ -117,7 +117,7 @@ def test_lex_float() -> None:
 
 def test_lex_string() -> None:
     def string_test(src: str, expected_value: str) -> None:
-        simple_test(TokenType.String, "_capture_string", src, expected_value)
+        simple_test(tokens.String, "_capture_string", src, expected_value)
 
     string_test("'wew' ", "wew")
     string_test("'wew'", "wew")
@@ -149,41 +149,41 @@ def test_lex_program() -> None:
     filepath = "test"
 
     expected = [
-        Token(type=TokenType.Nodent),
-        Token(type=TokenType.LParen),
-        Token(type=TokenType.RParen),
-        Token(type=TokenType.LBracket),
-        Token(type=TokenType.RBracket),
-        Token(type=TokenType.LCurly),
-        Token(type=TokenType.RCurly),
-        Token(type=TokenType.Colon),
-        Token(type=TokenType.Tick),
-        Token(type=TokenType.Comma),
-        Token(type=TokenType.Semicolon),
-        Token(type=TokenType.Indent),
-        Token(type=TokenType.Integer, value=0b10),
-        Token(type=TokenType.Integer, value=0o51),
-        Token(type=TokenType.Integer, value=0xA8),
-        Token(type=TokenType.Dedent),
-        Token(type=TokenType.Integer, value=12),
-        Token(type=TokenType.Integer, value=-12),
-        Token(type=TokenType.Float, value=-12.01),
-        Token(type=TokenType.Float, value=-12e3),
-        Token(type=TokenType.Nodent),
-        Token(type=TokenType.Float, value=-12.01e30),
-        Token(type=TokenType.Float, value=12.0),
-        Token(type=TokenType.Float, value=12.0e30),
-        Token(type=TokenType.Nodent),
-        Token(type=TokenType.Integer, value=0),
-        Token(type=TokenType.Integer, value=-0),
-        Token(type=TokenType.Indent),
-        Token(type=TokenType.Identifier, value="-"),
-        Token(type=TokenType.Indent),
-        Token(type=TokenType.Identifier, value="--wow"),
-        Token(type=TokenType.Identifier, value="abc"),
-        Token(type=TokenType.Dedent),
-        Token(type=TokenType.Dedent),
-        Token(type=TokenType.String, value="wow"),
+        tokens.Nodent(),
+        tokens.LParen(),
+        tokens.RParen(),
+        tokens.LBracket(),
+        tokens.RBracket(),
+        tokens.LCurly(),
+        tokens.RCurly(),
+        tokens.Colon(),
+        tokens.Tick(),
+        tokens.Comma(),
+        tokens.Semicolon(),
+        tokens.Indent(),
+        tokens.Integer(0b10),
+        tokens.Integer(0o51),
+        tokens.Integer(0xA8),
+        tokens.Dedent(),
+        tokens.Integer(12),
+        tokens.Integer(-12),
+        tokens.Float(-12.01),
+        tokens.Float(-12e3),
+        tokens.Nodent(),
+        tokens.Float(-12.01e30),
+        tokens.Float(12.0),
+        tokens.Float(12.0e30),
+        tokens.Nodent(),
+        tokens.Integer(0),
+        tokens.Integer(-0),
+        tokens.Indent(),
+        tokens.Identifier("-"),
+        tokens.Indent(),
+        tokens.Identifier("--wow"),
+        tokens.Identifier("abc"),
+        tokens.Dedent(),
+        tokens.Dedent(),
+        tokens.String("wow"),
     ]
 
     actual = list(Lexer(source=src, path=filepath))
@@ -205,16 +205,16 @@ def test_lexer_bad_indentation() -> None:
 
 def test_lexer_peek_at_end() -> None:
     actuals = list(Lexer(source="0", path=""))
-    expecteds = [Token(type=TokenType.Nodent), Token(type=TokenType.Integer, value=0)]
+    expecteds = [tokens.Nodent(), tokens.Integer(0)]
     assert expecteds == actuals
 
 
 def test_lexer_token_iter() -> None:
     lexer = Lexer(source="123 abc", path="")
-    assert lexer.next() == Token(type=TokenType.Nodent)
-    assert lexer.next() == Token(type=TokenType.Integer, value=123)
-    assert lexer.peek() == Token(type=TokenType.Identifier, value="abc")
-    assert lexer.peek(2) == Token(type=TokenType.End)
-    assert lexer.next() == Token(type=TokenType.Identifier, value="abc")
-    assert lexer.next() == Token(type=TokenType.End)
-    assert lexer.next() == Token(type=TokenType.End)
+    assert lexer.next() == tokens.Nodent()
+    assert lexer.next() == tokens.Integer(123)
+    assert lexer.peek() == tokens.Identifier("abc")
+    assert lexer.peek(2) == tokens.End()
+    assert lexer.next() == tokens.Identifier("abc")
+    assert lexer.next() == tokens.End()
+    assert lexer.next() == tokens.End()

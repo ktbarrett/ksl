@@ -1,9 +1,20 @@
 from ast import literal_eval
 from collections import deque
 from io import StringIO
-from typing import Any, Collection, Deque, Iterator, List, Optional, TextIO, Union, cast
+from typing import (
+    Any,
+    Collection,
+    Deque,
+    Iterator,
+    List,
+    Optional,
+    TextIO,
+    Type,
+    Union,
+    cast,
+)
 
-from ksl.tokens import Token, TokenType
+import ksl.tokens as tokens
 from ksl.types import Path
 
 
@@ -11,15 +22,15 @@ class LexError(Exception):
     pass
 
 
-class Lexer(Iterator[Token]):
+class Lexer(Iterator[tokens.Token]):
     indentation: Optional[str]
-    curr: Token
+    curr: tokens.Token
     path: Path
     lineno: int
     charno: int
 
-    START = Token(TokenType.Start)
-    END = Token(TokenType.End)
+    START = tokens.Start()
+    END = tokens.End()
     _START = "START"
     _END = ""
 
@@ -42,20 +53,20 @@ class Lexer(Iterator[Token]):
         self.path = path
         self.lineno = 1
         self.charno = 0
-        self._lookahead: Deque[Token] = deque()
+        self._lookahead: Deque[tokens.Token] = deque()
         self._indentations = [0]
         self._capture: List[str] = []
         self._curr = self._START
         self._src_lookahead: Deque[str] = deque()
 
-    def peek(self, i: int = 1) -> Token:
+    def peek(self, i: int = 1) -> tokens.Token:
         missing = i - len(self._lookahead)
         while missing > 0:
             self._lex()
             missing = i - len(self._lookahead)
         return self._lookahead[i - 1]
 
-    def next(self) -> Token:
+    def next(self) -> tokens.Token:
         if self.curr == self.END:
             return self.curr
         if not self._lookahead:
@@ -63,7 +74,7 @@ class Lexer(Iterator[Token]):
         self.curr = self._lookahead.popleft()
         return self.curr
 
-    def __next__(self) -> Token:
+    def __next__(self) -> tokens.Token:
         nxt = self.next()
         if nxt == self.END:
             raise StopIteration
@@ -115,8 +126,8 @@ class Lexer(Iterator[Token]):
     def _reset(self) -> None:
         self._capture.clear()
 
-    def _emit(self, ttype: TokenType, value: Optional[Any] = None) -> None:
-        self._lookahead.append(Token(ttype, value))
+    def _emit(self, ttype: Type[tokens.Token], value: Optional[Any] = None) -> None:
+        self._lookahead.append(ttype(value))
 
     def _error(self, msg: str) -> LexError:
         return LexError(msg)
@@ -149,7 +160,7 @@ class Lexer(Iterator[Token]):
                     continue
                 if self.indentation is None:
                     if len(self._capture) == 0:
-                        return self._emit(TokenType.Nodent)
+                        return self._emit(tokens.Nodent)
                     if len(set(self._capture)) > 1:
                         raise self._error(
                             "detected indentation is comprised of both spaces and tabs"
@@ -161,14 +172,14 @@ class Lexer(Iterator[Token]):
                     raise self._error("mixing indentation")
                 elif indents > self._indentations[-1]:
                     self._indentations.append(indents)
-                    return self._emit(TokenType.Indent)
+                    return self._emit(tokens.Indent)
                 elif indents < self._indentations[-1]:
                     while len(self._capture) < self._indentations[-1]:
                         self._indentations.pop()
-                        self._emit(TokenType.Dedent)
+                        self._emit(tokens.Dedent)
                     return
                 else:
-                    return self._emit(TokenType.Nodent)
+                    return self._emit(tokens.Nodent)
             if self._curr == "#":
                 while self._curr != "\n":
                     self._next()
@@ -197,36 +208,36 @@ class Lexer(Iterator[Token]):
                 return self._capture_string()
             if self._curr == "(":
                 self._next()
-                return self._emit(TokenType.LParen)
+                return self._emit(tokens.LParen)
             if self._curr == ")":
                 self._next()
-                return self._emit(TokenType.RParen)
+                return self._emit(tokens.RParen)
             if self._curr == "{":
                 self._next()
-                return self._emit(TokenType.LCurly)
+                return self._emit(tokens.LCurly)
             if self._curr == "}":
                 self._next()
-                return self._emit(TokenType.RCurly)
+                return self._emit(tokens.RCurly)
             if self._curr == "[":
                 self._next()
-                return self._emit(TokenType.LBracket)
+                return self._emit(tokens.LBracket)
             if self._curr == "]":
                 self._next()
-                return self._emit(TokenType.RBracket)
+                return self._emit(tokens.RBracket)
             if self._curr == ":":
                 self._next()
-                return self._emit(TokenType.Colon)
+                return self._emit(tokens.Colon)
             if self._curr == ",":
                 self._next()
-                return self._emit(TokenType.Comma)
+                return self._emit(tokens.Comma)
             if self._curr == ";":
                 self._next()
-                return self._emit(TokenType.Semicolon)
+                return self._emit(tokens.Semicolon)
             if self._curr == "`":
                 self._next()
-                return self._emit(TokenType.Tick)
+                return self._emit(tokens.Tick)
             if self._curr == self._END:
-                return self._emit(TokenType.End)
+                return self._emit(tokens.End)
             raise self._error(f"unexpected character {self._curr!r}")
 
     def _capture_identifier(self) -> None:
@@ -236,7 +247,7 @@ class Lexer(Iterator[Token]):
             if self._curr == ".":
                 self._save_and_next()
             if self._curr in self._separators:
-                return self._emit(TokenType.Identifier, "".join(self._capture))
+                return self._emit(tokens.Identifier, "".join(self._capture))
         if self._curr in self._digits:
             raise self._error("found number, not identifier")
         while True:
@@ -247,7 +258,7 @@ class Lexer(Iterator[Token]):
                 self._save_and_next()
             elif self._curr in self._separators:
                 value = "".join(self._capture)
-                return self._emit(TokenType.Identifier, value)
+                return self._emit(tokens.Identifier, value)
             else:
                 raise self._error(f"unexpected identifier character {self._curr!r}")
 
@@ -259,7 +270,7 @@ class Lexer(Iterator[Token]):
             if self._curr == start_char:
                 self._save_and_next()
                 value = self._parse_string(self._capture)
-                return self._emit(TokenType.String, value)
+                return self._emit(tokens.String, value)
             elif self._curr == "\\":
                 self._save_and_next()
                 if self._curr not in self._string_escapes:
@@ -279,7 +290,7 @@ class Lexer(Iterator[Token]):
             self._save_and_next()
         if self._curr in self._separators:
             value = self._parse_int(self._capture)
-            return self._emit(TokenType.Integer, value)
+            return self._emit(tokens.Integer, value)
         if self._curr == ".":
             self._save_and_next()
             while self._curr in self._digits:
@@ -294,7 +305,7 @@ class Lexer(Iterator[Token]):
                 self._save_and_next()
         if self._curr in self._separators:
             value = literal_eval("".join(self._capture))
-            return self._emit(TokenType.Float, value)
+            return self._emit(tokens.Float, value)
         raise self._error(f"number contained unexpected character {self._curr!r}")
 
     def _capture_hex(self) -> None:
@@ -307,7 +318,7 @@ class Lexer(Iterator[Token]):
             raise self._error("hex literal must have at least one hex digit")
         if self._curr in self._separators:
             value = literal_eval("".join(self._capture))
-            return self._emit(TokenType.Integer, value)
+            return self._emit(tokens.Integer, value)
         raise self._error(f"unexpected character in hex literal {self._curr!r}")
 
     def _capture_octal(self) -> None:
@@ -320,7 +331,7 @@ class Lexer(Iterator[Token]):
             raise self._error("octal literal must have at least one octal digit")
         if self._curr in self._separators:
             value = literal_eval("".join(self._capture))
-            return self._emit(TokenType.Integer, value)
+            return self._emit(tokens.Integer, value)
         raise self._error(f"unexpected character in octal literal {self._curr!r}")
 
     def _capture_binary(self) -> None:
@@ -333,7 +344,7 @@ class Lexer(Iterator[Token]):
             if len(self._capture) == 2:
                 raise self._error("binary literal must have at least one binary digit")
             value = literal_eval("".join(self._capture))
-            return self._emit(TokenType.Integer, value)
+            return self._emit(tokens.Integer, value)
         raise self._error(f"unexpected character in binary literal {self._curr!r}")
 
     @staticmethod
