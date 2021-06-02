@@ -237,6 +237,9 @@ class Lexer(Iterator[tokens.Token]):
                 self._next()
                 return self._emit(tokens.Tick)
             if self._curr == self._END:
+                for _ in range(len(self._indentations) - 1):
+                    self._indentations.pop()
+                    self._emit(tokens.Dedent)
                 return self._emit(tokens.End)
             raise self._error(f"unexpected character {self._curr!r}")
 
