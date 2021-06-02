@@ -77,13 +77,14 @@ list = lbracket, { expr, comma }, rbracket
 set = lcurly, { expr, comma }, rcurly
 map = lcurly, { expr, colon, expr, comma }, rcurly
 value = list | set | map | identifier | integer | float | string
-list_expr = lparen, { expr, [comma] }, rparen
-infixes = infix_expr | infix_expr, infix_expr | infix_expr, infix_expr, infixes
-infix_expr = value | lparen, infixes, rparen
-infix = tick, infixes, tick
-expr = list_expr | infix | value
-line = list_expr | expr, expr, { expr }, [semicolon], noindent
-paragraph = expr, { expr }, indent, ( line | paragraph ), { noindent, ( line | paragraph ) }, dedent
-program = ( nodent | indent ), { line | paragraph }, $
+list_expr = lparen, { expr }, rparen
+infix_subexpr = value | lparen, infixes, rparen
+infixes = infix_subexpr | infix_subexpr, infix_subexpr | infix_subexpr, infix_subexpr, infixes
+infix_expr = tick, infixes, tick
+expr = list_expr | infix_expr | value
+line = expr, expr, { expr },
+paragraph = expr, { expr }, indent, block, { noident, block }, dedent
+block = expr | line | paragraph
+module = start, { noident, block }, end
 ```
 
