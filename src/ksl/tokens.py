@@ -23,7 +23,7 @@ class Dedent(Token):
 
 
 @dataclass(frozen=True)
-class Identifier(Token):
+class Name(Token):
     pass
 
 

@@ -74,16 +74,13 @@ The parser transforms infix expressions into prefix expressions (Polish notation
 
 ```
 list = lbracket, { expr, comma }, rbracket
-set = lcurly, { expr, comma }, rcurly
+set = lcurly,  expr, comma, { expr, comma }, rcurly
 map = lcurly, { expr, colon, expr, comma }, rcurly
 value = list | set | map | identifier | integer | float | string
-list_expr = lparen, { expr }, rparen
-infix_subexpr = value | lparen, infixes, rparen
-infixes = infix_subexpr | infix_subexpr, infix_subexpr | infix_subexpr, infix_subexpr, infixes
-infix_expr = tick, infixes, tick
-expr = list_expr | infix_expr | value
-line = expr, expr, { expr },
-paragraph = expr, { expr }, indent, block, { noident, block }, dedent
+list_expr = lparen, { expr, [comma] }, rparen
+expr = list_expr | value
+line = expr, expr, { expr }, [semicolon],
+paragraph = expr, { expr }, [colon], indent, block, { noident, block }, dedent
 block = expr | line | paragraph
 module = start, { noident, block }, end
 ```

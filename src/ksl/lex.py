@@ -139,7 +139,7 @@ class Lexer(Iterator[tokens.Token]):
     _octal_chars = frozenset("01234567")
     _binary_chars = frozenset("01")
     _string_escapes = frozenset("abfnrtv\\'\"")
-    _identifier_chars = (
+    _name_chars = (
         frozenset(
             "~!@$%^&*-_=+|<.>/?abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
         )
@@ -188,7 +188,7 @@ class Lexer(Iterator[tokens.Token]):
                 if self._peek() in self._digits:
                     return self._capture_number()
                 else:
-                    return self._capture_identifier()
+                    return self._capture_name()
             if self._curr == "0":
                 if self._peek() in ("x", "X"):
                     return self._capture_hex()
@@ -201,8 +201,8 @@ class Lexer(Iterator[tokens.Token]):
             if self._curr in self._digits:
                 self._capture_number()
                 return
-            if self._curr in self._identifier_chars or self._curr == "\\":
-                self._capture_identifier()
+            if self._curr in self._name_chars or self._curr == "\\":
+                self._capture_name()
                 return
             if self._curr in ('"', "'"):
                 return self._capture_string()
@@ -243,27 +243,27 @@ class Lexer(Iterator[tokens.Token]):
                 return self._emit(tokens.End)
             raise self._error(f"unexpected character {self._curr!r}")
 
-    def _capture_identifier(self) -> None:
+    def _capture_name(self) -> None:
         self._reset()
         if self._curr in ("-", "."):
             self._save_and_next()
             if self._curr == ".":
                 self._save_and_next()
             if self._curr in self._separators:
-                return self._emit(tokens.Identifier, "".join(self._capture))
+                return self._emit(tokens.Name, "".join(self._capture))
         if self._curr in self._digits:
-            raise self._error("found number, not identifier")
+            raise self._error("found number, not name")
         while True:
-            if self._curr in self._identifier_chars:
+            if self._curr in self._name_chars:
                 self._save_and_next()
             elif self._curr == "\\":
                 self._next()
                 self._save_and_next()
             elif self._curr in self._separators:
                 value = "".join(self._capture)
-                return self._emit(tokens.Identifier, value)
+                return self._emit(tokens.Name, value)
             else:
-                raise self._error(f"unexpected identifier character {self._curr!r}")
+                raise self._error(f"unexpected name character {self._curr!r}")
 
     def _capture_string(self) -> None:
         self._reset()
